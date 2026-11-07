@@ -474,6 +474,18 @@ if st.session_state.results:
     m3.metric("Grammar Issues", len(results["ai"].get("grammar_issues", [])))
     charge_analysis = (results["ai"].get("charge_analysis", {}))
     m4.metric("Charge Supported", "✅"
+              if st.button("Export Results"):
+    if st.session_state.results is None:
+        st.warning("Please analyze a report first.")
+    else:
+        pdf_file = export_results(st.session_state.results)
+
+        with open(pdf_file, "rb") as f:
+            st.download_button(
+                "Download PDF",
+                f,
+                file_name="PR_Results.pdf"
+            )
               if charge_analysis.get(
                   "supported",
                   False
