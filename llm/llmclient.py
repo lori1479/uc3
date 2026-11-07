@@ -95,7 +95,7 @@ def analyze_report(report: Report, charges, charge_elements: list): #main review
     Charge Code: {report.charge_code}
 
     Narrative: {report.narrative}
-    Evidence: {report.evidence}
+    Facts: {report.facts}
     Inspection Findings: {report.inspection_findings}
     Charge Elements: {json.dumps(charge_elements, indent=4)}
 
