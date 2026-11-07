@@ -6,12 +6,13 @@ from pathlib import Path
 import streamlit as st
 from streamlit_pdf_viewer import pdf_viewer
 import PyPDF2
+
 from models.report import Report
 from validators.missing_info import check_missing_info
 from validators.charge_validator import validate_charge
 
 from llm.llmclient import analyze_report
-from llm.extractor import extract_data_report
+from llm.extractor import extract_data_report, report_from_dict
 from database import save_report, get_reports, load_report
 from export_pdf import export_results
 
@@ -69,6 +70,8 @@ if "results" not in st.session_state:
     st.session_state.results = None
 if "selected_issue" not in st.session_state:
     st.session_state.selected_issue = ""
+if "report_data" not in st.session_state:
+    st.session_state.report_data = None  # parsed JSON upload, if any
 
 #Sidebar
 
@@ -77,6 +80,7 @@ with st.sidebar:
 
     if st.button("New Report"):
         st.session_state.report_text = ""
+        st.session_state.report_data = None
         st.session_state.results = None
         st.rerun()
 
@@ -92,6 +96,7 @@ with st.sidebar:
         if st.button(f"{report_name}", key=f"report_{report_id}"):
             loaded = load_report(report_id)
             st.session_state.report_text = loaded[0]
+            st.session_state.report_data = None
             st.session_state.results = json.loads(loaded[1])
             pdf_path = loaded[2]
             if pdf_path:
@@ -137,7 +142,7 @@ with left_col:
 
     upload_file = st.file_uploader(
         "Upload Police Report",
-        type=["txt", "pdf", "docx"]
+        type=["txt", "pdf", "docx", "json"]
     )
     SAVE_DIR = Path("saved_reports")
     SAVE_DIR.mkdir(exist_ok=True)
@@ -146,6 +151,7 @@ with left_col:
     if upload_file:
         file_bytes = upload_file.getvalue()
         text = ""
+        st.session_state.report_data = None
 
         if upload_file.type == "application/pdf":
             pdf_path = (SAVE_DIR / upload_file.name)
@@ -170,6 +176,14 @@ with left_col:
             except Exception:
                 st.warning("Could not read this .docx file.")
 
+        elif upload_file.name.lower().endswith(".json"):
+            try:
+                parsed = json.loads(file_bytes.decode("utf-8-sig"))
+                st.session_state.report_data = parsed
+                text = json.dumps(parsed, indent=2)
+            except Exception:
+                st.error("Could not read this JSON file. Check that it is valid JSON.")
+
         else:
             text = file_bytes.decode("utf-8", errors="ignore")
         
@@ -182,11 +196,23 @@ with left_col:
             with st.spinner("Analyzing Report..."):
                 valid_charge_ids = [c["charge_id"] for c in charges["charges"]]
 
-                # Pull the fields out of the uploaded report. Anything not found is None.
-                report = extract_data_report(
-                    st.session_state.report_text,
-                    valid_charge_ids,
-                )
+                report = None
+
+                # JSON that already uses the Report field names is loaded directly.
+                if st.session_state.report_data is not None:
+                    report, matched = report_from_dict(
+                        st.session_state.report_data,
+                        st.session_state.report_text,
+                    )
+                    if matched < 3:  # unfamiliar layout, so extract from the text instead
+                        report = None
+
+                # Otherwise pull the fields out of the report text. Anything not found is None.
+                if report is None:
+                    report = extract_data_report(
+                        st.session_state.report_text,
+                        valid_charge_ids,
+                    )
 
                 missing = check_missing_info(report)
                 charge_results = validate_charge(report.model_dump())
@@ -373,6 +399,8 @@ with right_col:
             </div>
             """, unsafe_allow_html=True)
             pdf_viewer(upload_file.getvalue(), width=900)
+        elif upload_file.name.lower().endswith(".json") and st.session_state.report_data is not None:
+            st.json(st.session_state.report_data)
         else:
             st.markdown("""
             <div style="
