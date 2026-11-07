@@ -17,6 +17,78 @@
       "report_field": "entry_time_or_place",
       "source_file": "USC_1325.txt",
       "review_status": "pending_legal_review"
+    },
+    {
+      "requirement_id": "1325_a_1_without_inspection",
+      "charge_id": "8_USC_1325",
+      "subsection": "1325(a)(1)",
+      "description": "Entry or attempted entry without inspection by immigration officers",
+      "report_field": "entry_without_inspection",
+      "source_file": "USC_1325.txt",
+      "review_status": "pending_legal_review"
+    },
+    {
+      "requirement_id": "1325_a_2_entry_or_attempt",
+      "charge_id": "8_USC_1325",
+      "subsection": "1325(a)(2)",
+      "description": "Entry or attempted entry by an alien who has previously been denied admission, excluded, deported, or removed",
+      "report_field": "entry_or_attempt",
+      "source_file": "USC_1325.txt",
+      "review_status": "pending_legal_review"
+    },
+    {
+      "requirement_id": "1326_a_2_previous_denial_or_removal",
+      "charge_id": "8_USC_1326",
+      "subsection": "1326(a)(2)",
+      "description": "previous denial of admission, exclusion, deportation, or removal",
+      "report_field": "previous_denial_or_removal",
+      "source_file": "USC_1326.txt",
+      "review_status": "pending_legal_review"
+    },
+    {
+      "requirement_id": "1326_a_2_entry_without_inspection",
+      "charge_id": "8_USC_1326",
+      "subsection": "1326(a)(2)",
+      "description": "Entry or attempted entry without inspection by immigration officers",
+      "report_field": "entry_without_inspection",
+      "source_file": "USC_1326.txt",
+      "review_status": "pending_legal_review"
+    },
+    {
+      "requirement_id": "1326_a_reentry_after_removal",
+      "charge_id": "8_USC_1326",
+      "subsection": "1326(a)",
+      "description": "Reentry after removal, deportation, or exclusion",
+      "report_field": "reentry_after_removal",
+      "source_file": "USC_1326.txt",
+      "review_status": "pending_legal_review"
+    },
+    {
+      "requirement_id": "1324_a_2_bringing_or_harboring",
+      "charge_id": "8_USC_1324",
+      "subsection": "1324(a)(2)",
+      "description": "bringing in or harboring certain aliens without inspection",
+      "report_field": "bringing_or_harboring",
+      "source_file": "USC_1324.txt",
+      "review_status": "pending_legal_review"
+    },
+    {
+      "requirement_id": "1324_a_2_knowledge",
+      "charge_id": "8_USC_1324",
+      "subsection": "1324(a)(2)",
+      "description": "knowing or in reckless disregard of the fact that such alien has come to, entered, or remains in the United States in violation of law",
+      "report_field": "knowledge_of_violation",
+      "source_file": "USC_1324.txt",
+      "review_status": "pending_legal_review"
+    },
+    {
+      "requirement_id": "1324_a_2_intent_to_violate",
+      "charge_id": "8_USC_1324",
+      "subsection": "1324(a)(2)",
+      "description": "with intent to violate the law",
+      "report_field": "intent_to_violate",
+      "source_file": "USC_1324.txt",
+      "review_status": "pending_legal_review"
     }
   ]
 }
