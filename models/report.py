@@ -8,6 +8,7 @@ class Report(BaseModel):
     report_date: Optional[str] = None
     encounter_time: Optional[str] = None
     port_of_entry: Optional[str] = None
+    incident_date: Optional[str] = None
 
     traveler_name: Optional[str] = None
     nationality: Optional[str] = None
