@@ -231,9 +231,9 @@ with left_col:
                 # Otherwise pull the fields out of the report text. Anything not found is None.
         if report is None:
             report = extract_data_report(
-            st.session_state.report_text,
-            valid_charge_ids,
-        )
+                st.session_state.report_text,
+                valid_charge_ids,
+            )
             st.subheader("Debug Information")
             st.write(    
                 "Extracted Text Length:",
@@ -248,14 +248,20 @@ with left_col:
             st.json(report.model_dump())
         
             missing = check_missing_info(report)
-            charge_results = validate_charge(report.model_dump())
-            ai_results = analyze_report(report, charge_results, [])
+            charge_results = validate_charge(
+                report.model_dump()
+            )
+            ai_results = analyze_report(
+                report, 
+                charge_results, 
+                []
+            )
             st.session_state.results = {
                 "report": report.model_dump(),
                 "missing": missing,
                 "charge": charge_results,
                 "ai": ai_results
-                }
+            }
 
     results = st.session_state.results
 
