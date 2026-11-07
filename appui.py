@@ -189,79 +189,56 @@ with left_col:
         
         st.session_state.report_text = text
 
+    
     if st.button("Analyze Report"):
-        report = extract_data_report(
-        st.session_state.report_text,
-        valid_charge_ids=[
-            c["charge_id"]
-            for c in charges["charges"]
-        ]
-    )
+        if not st.session_state.report_text.strip():
+            st.warning("Please upload a report before analyzing.")
+        else:
+            valid_charge_ids = [
+                c["charge_id"]
+                for c in charges["charges"]
+            ]
 
-    with st.spinner("Analyzing Report..."):
-
-        missing = check_missing_info(report)
-
-        charge_results = validate_charge(
-            report.model_dump()
-        )
-
-        ai_results = analyze_report(
-            report,
-            charge_results,
-            []
-        )
-
-        st.session_state.results = {
-            "missing": missing,
-            "charge": charge_results,
-            "ai": ai_results
-        }
-
-
-                # JSON that already uses the Report field names is loaded directly.
-        if st.session_state.report_data is not None:
-            report, matched = report_from_dict(
-            st.session_state.report_data,
-            st.session_state.report_text,
-        )
-        if matched < 3:  # unfamiliar layout, so extract from the text instead
             report = None
 
-                # Otherwise pull the fields out of the report text. Anything not found is None.
-        if report is None:
-            report = extract_data_report(
-                st.session_state.report_text,
-                valid_charge_ids,
-            )
-            st.subheader("Debug Information")
-            st.write(    
-                "Extracted Text Length:",
-                len(st.session_state.report_text)
-            )
-            st.text_area(    
-                "Raw Report Text",
-                st.session_state.report_text,
-                height=250
-            )
-            st.write("Parsed Report Object")
-            st.json(report.model_dump())
-        
-            missing = check_missing_info(report)
-            charge_results = validate_charge(
-                report.model_dump()
-            )
-            ai_results = analyze_report(
-                report, 
-                charge_results, 
-                []
-            )
-            st.session_state.results = {
-                "report": report.model_dump(),
-                "missing": missing,
-                "charge": charge_results,
-                "ai": ai_results
-            }
+            # Handle JSON files that already contain report fields
+            if st.session_state.report_data is not None:
+                report, matched = report_from_dict(
+                    st.session_state.report_data,
+                    st.session_state.report_text
+                )
+
+                if matched < 3:
+                    report = None
+
+            # Extract information from the text if necessary
+            if report is None:
+                report = extract_data_report(
+                    st.session_state.report_text,
+                    valid_charge_ids
+                )
+
+            with st.spinner("Analyzing Report..."):
+                missing = check_missing_info(report)
+
+                charge_results = validate_charge(
+                    report.model_dump()
+                )
+
+                ai_results = analyze_report(
+                    report,
+                    charge_results,
+                    []
+                )
+
+                st.session_state.results = {
+                    "report": report.model_dump(),
+                    "missing": missing,
+                    "charge": charge_results,
+                    "ai": ai_results
+                }
+
+            st.success("Report analysis completed!")
 
     results = st.session_state.results
 
