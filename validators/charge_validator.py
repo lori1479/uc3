@@ -7,10 +7,45 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 CHARGES_FILE = BASE_DIR / "data" / "charges.json"
 REQUIREMENTS_FILE = BASE_DIR / "data" / "charge_requirements.json"
 
+# Fields scanned for uncertain wording. Edit this list to tune the check.
+# entry_event / entry_time_or_place are only present if your report supplies them.
+AMBIGUITY_FIELDS = [
+    "entry_event",
+    "entry_time_or_place",
+    "entry_without_inspection",
+    "previous_denial_or_removal",
+    "entry_or_attempt",
+    "officer_observations",
+    "inspection_findings",
+]
+
+UNCERTAINTY_PHRASES = [
+    "unknown",
+    "unclear",
+    "uncertain",
+    "may have",
+    "might have",
+    "could not confirm",
+    "not confirmed",
+    "possibly"
+]
+
 
 def load_json(file_path):
     with open(file_path, "r", encoding="utf-8") as file:
         return json.load(file)
+
+
+def _is_blank(value):
+    """True for None, blank strings, and empty lists/dicts."""
+    if value is None:
+        return True
+    if isinstance(value, str) and not value.strip():
+        return True
+    if isinstance(value, (list, dict)) and not value:
+        return True
+    return False
+
 
 def get_evidence_reference(report, field_name):
     """
@@ -19,15 +54,15 @@ def get_evidence_reference(report, field_name):
     The report can provide sentence IDs and excerpts
     in an evidence_references dictionary.
     """
-    references = report.get("evidence_references", {})
-
-    reference = references.get(field_name, {})
+    references = report.get("evidence_references") or {}
+    reference = references.get(field_name) or {}
 
     return {
         "field": field_name,
         "sentence_id": reference.get("sentence_id"),
         "excerpt": reference.get("excerpt")
     }
+
 
 def check_contradictions(report):
     contradictions = []
@@ -50,44 +85,35 @@ def check_contradictions(report):
             "conflicting_field": "verified_entry_location",
             "message": "Two location fields contain different values.",
             "evidence": {
-    "entry_location": {
-        "value": reported_location,
-        "reference": get_evidence_reference(
-            report, "entry_location"
-        )
-    },
-    "verified_entry_location": {
-        "value": verified_location,
-        "reference": get_evidence_reference(
-            report, "verified_entry_location"
-        )
-    }
-},
+                "entry_location": {
+                    "value": reported_location,
+                    "reference": get_evidence_reference(
+                        report, "entry_location"
+                    )
+                },
+                "verified_entry_location": {
+                    "value": verified_location,
+                    "reference": get_evidence_reference(
+                        report, "verified_entry_location"
+                    )
+                }
+            },
             "review_required": True
         })
 
     return contradictions
+
+
 def check_ambiguity(report):
     flags = []
 
-    uncertainty_phrases = [
-        "unknown",
-        "unclear",
-        "uncertain",
-        "may have",
-        "might have",
-        "could not confirm",
-        "not confirmed",
-        "possibly"
-    ]
-
-    for field_name in ["entry_event", "entry_time_or_place"]:
+    for field_name in AMBIGUITY_FIELDS:
         value = report.get(field_name)
 
         if not isinstance(value, str):
             continue
 
-        if any(phrase in value.lower() for phrase in uncertainty_phrases):
+        if any(phrase in value.lower() for phrase in UNCERTAINTY_PHRASES):
             flags.append({
                 "type": "ambiguous_information",
                 "field": field_name,
@@ -100,17 +126,28 @@ def check_ambiguity(report):
 
     return flags
 
+
+def _review_result(flag_type, message, selected_charge=None):
+    """Early-return result using the same flag shape as the normal path."""
+    return {
+        "selected_charge": selected_charge,
+        "status": "human_review_required",
+        "flags": [{
+            "type": flag_type,
+            "message": message,
+            "review_required": True
+        }]
+    }
+
+
 def validate_charge(report):
     charges_data = load_json(CHARGES_FILE)
     requirements_data = load_json(REQUIREMENTS_FILE)
 
-    selected_charge = report.get("selected_charge")
+    selected_charge = report.get("charge_code")
 
     if not selected_charge:
-        return {
-            "status": "human_review_required",
-            "flags": ["No charge was selected."]
-        }
+        return _review_result("no_charge", "No charge was selected.")
 
     charge = next(
         (
@@ -121,10 +158,11 @@ def validate_charge(report):
     )
 
     if charge is None:
-        return {
-            "status": "human_review_required",
-            "flags": ["Selected charge is not in the charge catalog."]
-        }
+        return _review_result(
+            "unknown_charge",
+            "Selected charge is not in the charge catalog.",
+            selected_charge,
+        )
 
     applicable_requirements = [
         item
@@ -133,12 +171,11 @@ def validate_charge(report):
     ]
 
     if not applicable_requirements:
-        return {
-            "status": "human_review_required",
-            "flags": [
-                "No documentation requirements are configured for this charge."
-            ]
-        }
+        return _review_result(
+            "no_requirements",
+            "No documentation requirements are configured for this charge.",
+            selected_charge,
+        )
 
     flags = []
 
@@ -146,9 +183,7 @@ def validate_charge(report):
         field_name = requirement["report_field"]
         field_value = report.get(field_name)
 
-        if field_value is None or (
-            isinstance(field_value, str) and not field_value.strip()
-        ):
+        if _is_blank(field_value):
             flags.append({
                 "type": "missing_documentation",
                 "requirement_id": requirement["requirement_id"],
@@ -161,6 +196,7 @@ def validate_charge(report):
                 ),
                 "review_required": True
             })
+
     flags.extend(check_contradictions(report))
     flags.extend(check_ambiguity(report))
 
@@ -178,7 +214,7 @@ def validate_charge(report):
 
 if __name__ == "__main__":
     sample_report = {
-        "selected_charge": "8_USC_1325",
+        "charge_code": "8_USC_1325",
         "entry_event": "The individual may have attempted entry.",
         "entry_time_or_place": "Location documented in the report",
         "entry_location": "Location A",
@@ -203,7 +239,6 @@ if __name__ == "__main__":
             }
         }
     }
-
 
     result = validate_charge(sample_report)
 
