@@ -6,7 +6,6 @@ from pathlib import Path
 import streamlit as st
 from streamlit_pdf_viewer import pdf_viewer
 import PyPDF2
-from docx import Document
 from models.report import Report
 from validators.missing_info import check_missing_info
 from validators.charge_validator import validate_charge
