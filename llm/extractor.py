@@ -38,7 +38,6 @@ FIELD_HINTS = {
     "evidence": "evidence listed or referenced in the report",
 }
 
-
 def _clean(value) -> Optional[str]:
     """Turn the model's output into a string, or None if it's effectively blank."""
     if value is None:
@@ -95,3 +94,38 @@ def extract_data_report(report_text: str, valid_charge_ids: Optional[list] = Non
             values["charge_code"] = None
 
     return Report(**values, facts=report_text or None, narrative=report_text or None)
+
+
+def report_from_dict(data, fallback_text: Optional[str] = None):
+    """
+    Build a Report straight from a JSON dict whose keys match the Report fields.
+
+    Returns (report, matched_count). matched_count is how many Report field names
+    were present as keys, so the caller can tell whether the JSON really uses the
+    Report layout (and fall back to extract_data_report if it doesn't).
+    Missing keys become None; unknown keys are ignored.
+    """
+    if not isinstance(data, dict):
+        return None, 0
+
+    # Unwrap files shaped like {"report": {...}}
+    if not any(k in Report.model_fields for k in data):
+        for value in data.values():
+            if isinstance(value, dict) and any(k in Report.model_fields for k in value):
+                data = value
+                break
+
+    values = {}
+    matched = 0
+    for name in Report.model_fields:
+        if name in data:
+            matched += 1
+        values[name] = _clean(data.get(name))
+
+    # facts / narrative fall back to the file's text if the JSON doesn't have them
+    if not values.get("facts"):
+        values["facts"] = fallback_text
+    if not values.get("narrative"):
+        values["narrative"] = fallback_text
+
+    return Report(**values), matched
