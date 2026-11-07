@@ -5,9 +5,15 @@
 
 import json
 import re
+import os
+from google import genai
 from typing import Optional
 
 from models.report import Report
+
+client = genai.Client(
+    api_key=os.getenv("GEMINI_API_KEY")
+)
 
 # Fields that are filled directly from the full text instead of extracted
 TEXT_FIELDS = {"facts", "narrative"}
@@ -81,20 +87,43 @@ def extract_data_report(report_text: str, valid_charge_ids: Optional[list] = Non
         )
 
         try:
-            raw = re.sub(r"^```(?:json)?|```$", "", raw.strip(), flags=re.MULTILINE).strip()
+
+            response = client.models.generate_content(
+                model="gemini-2.5-flash-lite",
+                contents=user_prompt
+            )
+
+            raw = response.text
+
+            raw = re.sub(
+                r"^```(?:json)?|```$",
+                "",
+                raw.strip(),
+                flags=re.MULTILINE
+            ).strip()
+
             data = json.loads(raw)
+
             if isinstance(data, dict):
+
                 for name in EXTRACT_FIELDS:
-                    values[name] = _clean(data.get(name))
+                    values[name] = _clean(
+                        data.get(name)
+                    )
+
         except Exception as e:
-            print(f"Report extraction failed: {e}")
 
-        # Only keep a charge_code that actually exists in charges.json
-        if valid_charge_ids and values.get("charge_code") not in valid_charge_ids:
-            values["charge_code"] = None
+            print(
+                f"Report extraction failed: {e}"
+            )
 
-    return Report(**values, facts=report_text or None, narrative=report_text or None)
+    if valid_charge_ids and values.get("charge_code") not in valid_charge_ids:
+        values["charge_code"] = None
 
+    values["facts"] = report_text
+    values["narrative"] = report_text
+
+    return Report(**values)
 
 def report_from_dict(data, fallback_text: Optional[str] = None):
     """
