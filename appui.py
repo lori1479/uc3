@@ -189,9 +189,8 @@ with left_col:
         
         st.session_state.report_text = text
 
-     if st.button("Analyze Report"):
-
-    report = extract_data_report(
+    if st.button("Analyze Report"):
+        report = extract_data_report(
         st.session_state.report_text,
         valid_charge_ids=[
             c["charge_id"]
