@@ -38,7 +38,7 @@ st.title("Police Report Analyzer")
 #Custom css
 st.markdown("""
 <style>
-.main {background-color:#f4f7c;}
+.main {background-color:#f4f7fc;}
 
 html, body, [class*="css"] {font-family:"Inter", sans-serif;}
 
